@@ -1,0 +1,222 @@
+
+<!DOCTYPE html>
+<head>
+<title>Corona-Statics</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Merriweather&display=swap");
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Merriweather", serif;
+}
+
+body {
+  padding: 20px;
+  background-color: #ecf0f1;
+}
+
+.h2 {
+  text-align: center;
+  font-size: 35px;
+  margin-bottom: 2rem;
+}
+h3.heading {
+  text-align: center;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+.select {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin: 1rem auto;
+  }
+.cards {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 10px auto;
+  max-width: 1200px;
+}
+.card {
+    width: 300px;
+    max-width: 300px;
+    margin: 12px;
+    padding: 1.5rem;
+    color: #000;
+    border-radius: 5px;
+    box-shadow: 7px 6px 26px -17px rgba(0, 0, 0, 1);
+    cursor: pointer;
+    transition: 0.3s all;
+}
+.h3 {
+      font-size: 40px;
+ }
+.p {
+      font-size: 20px;
+    }
+
+p:nth-child(1) {
+      background-color: #3498db;
+    }
+p:nth-child(2) {
+      background-color: #e74c3c;
+    }
+p:nth-child(3) {
+      background-color: #2ecc71;
+    }
+
+p:hover {
+      transform: translateY(-4px);
+    }
+
+world-map,country-chart {
+  width: 900px;
+  max-width: 100%;
+  margin: 8px auto;
+  box-shadow: 2px 3px 18px -17px rgba(0, 0, 0, 1);
+  margin-bottom: 2rem;
+}
+p.info {
+  text-align: center;
+  font-size: 14px;
+}
+a {
+    text-decoration: none;
+  }
+</style>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script>
+// World Map
+google.charts.load("current", {
+  packages: ["geochart"]
+});
+google.charts.setOnLoadCallback(drawRegionsMap);
+
+function drawRegionsMap() {
+  fetch("https://api.covid19api.com/summary")
+    .then((res) => res.json())
+    .then((res) => {
+      // Set number of cases
+      setNumbers(res.Global);
+      let cases = [];
+
+      res.Countries.forEach((country) => {
+        cases.push([country.CountryCode, country.TotalConfirmed]);
+      });
+
+      var data = google.visualization.arrayToDataTable([
+        ["Country", "Number of cases"],
+        ...cases
+      ]);
+
+      var options = {
+        colorAxis: { colors: ["#3498db", "#ff7675", "#ff6b81", "#c0392b"] }
+      };
+
+      var chart = new google.visualization.GeoChart(
+        document.querySelector(".world-map")
+      );
+
+      chart.draw(data, options);
+    });
+}
+
+// Line charts
+google.charts.load("current", { packages: ["corechart"] });
+google.charts.setOnLoadCallback(drawChart);
+
+// var countryName = 'india'; // Default country name
+
+function drawChart(countryName = "india") {
+  fetch(
+    "https://api.covid19api.com/total/country/" +
+      countryName +
+      "/status/confirmed"
+  )
+    .then((res) => res.json())
+    .then((res) => {
+      let cases = [];
+      if (res.length !== 0) {
+        res.forEach((day) => {
+          cases.push([day.Date.slice(0, 10), day.Cases]);
+        });
+
+        var data = google.visualization.arrayToDataTable([
+          ["Date", "Cases"],
+          ...cases
+        ]);
+
+        var options = {
+          title: "Number of cases",
+          legend: { position: "bottom" }
+        };
+
+        var chart = new google.visualization.LineChart(
+          document.querySelector(".country-chart")
+        );
+
+        chart.draw(data, options);
+      } else {
+        document.querySelector(".country-chart").innerHTML = "No data";
+      }
+    });
+}
+
+function setNumbers(numbers) {
+  document.getElementById("cases").innerHTML = numbers.TotalConfirmed;
+  document.getElementById("deaths").innerHTML = numbers.TotalDeaths;
+  document.getElementById("recovered").innerHTML = numbers.TotalRecovered;
+}
+
+const select = document.getElementById("country");
+window.onload = function () {
+  fetch("https://api.covid19api.com/countries")
+    .then((res) => res.json())
+    .then((data) => {
+      data.forEach((d) => {
+        select.innerHTML += `<option value="${d.Slug}">${d.Country}</option>`;
+      });
+      select.value = "india";
+    });
+};
+
+select.addEventListener("change", () => {
+  document.querySelector(".country-chart").innerHTML = "";
+  drawChart(select.value);
+});
+
+</script>
+</head>
+<body>
+<h2>Coronavirus Dashboard</h2>
+<div class="cards">
+<div class="card">
+<h3 id="cases">--</h3>
+<p>Total Cases</p>
+</div>
+<div class="card">
+<h3 id="deaths">--</h3>
+<p>Total Deaths</p>
+</div>
+<div class="card">
+<h3 id="recovered">--</h3>
+<p>Total Recovered</p>
+</div>
+</div>
+<h3 class="heading">World Data</h3>
+<div class="world-map"></div>
+<h3 class="heading">Country Specific</h3>
+<div class="select">
+<select id="country"></select>
+</div>
+<div class="country-chart"></div>
+<br>
+<br>
+<br>
+<br>
+<p class="info">The API used is available <a href="https://api.covid19api.com/" target="_blank">here</a>.</p>
+</body>
